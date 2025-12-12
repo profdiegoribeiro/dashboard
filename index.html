@@ -1,0 +1,920 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard de Operações</title>
+  
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+  
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f5f7fa;
+      color: #333;
+    }
+    
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 1.5rem 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      position: fixed;
+      width: 100%;
+      top: 0;
+      z-index: 1000;
+    }
+    
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+    }
+    
+    .header p {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-top: 0.3rem;
+    }
+    
+    /* Layout Container */
+    .container {
+      display: flex;
+      margin-top: 90px;
+      min-height: calc(100vh - 90px);
+    }
+    
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background: white;
+      box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+      padding: 2rem 0;
+      position: fixed;
+      height: calc(100vh - 90px);
+      overflow-y: auto;
+    }
+    
+    .sidebar h3 {
+      padding: 0 1.5rem;
+      color: #667eea;
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 1rem;
+    }
+    
+    .sidebar ul {
+      list-style: none;
+    }
+    
+    .sidebar ul li {
+      margin: 0.3rem 0;
+    }
+    
+    .sidebar ul li a {
+      display: block;
+      padding: 1rem 1.5rem;
+      color: #555;
+      text-decoration: none;
+      transition: all 0.3s ease;
+      border-left: 3px solid transparent;
+    }
+    
+    .sidebar ul li a:hover,
+    .sidebar ul li a.active {
+      background: #f0f4ff;
+      color: #667eea;
+      border-left-color: #667eea;
+    }
+    
+    .sidebar ul li a i {
+      margin-right: 0.8rem;
+      width: 20px;
+      display: inline-block;
+    }
+    
+    /* Main Content */
+    .main-content {
+      flex: 1;
+      margin-left: 250px;
+      padding: 2rem;
+    }
+    
+    /* Section */
+    .section {
+      display: none;
+    }
+    
+    .section.active {
+      display: block;
+    }
+    
+    .section-header {
+      margin-bottom: 2rem;
+    }
+    
+    .section-header h2 {
+      font-size: 2rem;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    
+    .section-header p {
+      color: #777;
+      font-size: 1rem;
+    }
+    
+    /* Cards Grid */
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+    
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+    
+    .card-title {
+      font-size: 0.9rem;
+      color: #777;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    
+    .card-value {
+      font-size: 2rem;
+      font-weight: 700;
+      color: #333;
+      margin-bottom: 0.5rem;
+    }
+    
+    .card-change {
+      font-size: 0.9rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+    }
+    
+    .card-change.positive {
+      color: #10b981;
+    }
+    
+    .card-change.negative {
+      color: #ef4444;
+    }
+    
+    .card-change span {
+      margin-left: 0.3rem;
+    }
+    
+    /* Chart Container */
+    .chart-container {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      margin-bottom: 2rem;
+    }
+    
+    .chart-header {
+      margin-bottom: 1.5rem;
+    }
+    
+    .chart-header h3 {
+      font-size: 1.3rem;
+      color: #333;
+      margin-bottom: 0.3rem;
+    }
+    
+    .chart-header p {
+      color: #777;
+      font-size: 0.9rem;
+    }
+    
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: #777;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    /* Colors */
+    .color-chargeback { background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); }
+    .color-garantia { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); }
+    .color-baddebt { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); }
+    .color-credenciamento { background: linear-gradient(135deg, #30cfd0 0%, #330867 100%); }
+    .color-prevencao { background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      .sidebar {
+        width: 100%;
+        height: auto;
+        position: relative;
+      }
+      
+      .main-content {
+        margin-left: 0;
+      }
+      
+      .container {
+        flex-direction: column;
+      }
+      
+      .header h1 {
+        font-size: 1.3rem;
+      }
+      
+      .cards-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <div class="header">
+    <h1>📊 Dashboard de Operações</h1>
+    <p>Monitoramento em tempo real das principais métricas</p>
+  </div>
+  
+  <!-- Container -->
+  <div class="container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <h3>Navegação</h3>
+      <ul>
+        <li><a href="#" class="nav-link active" data-section="overview">
+          <i>📈</i> Visão Geral
+        </a></li>
+        <li><a href="#" class="nav-link" data-section="chargeback">
+          <i>💳</i> Chargeback
+        </a></li>
+        <li><a href="#" class="nav-link" data-section="garantia">
+          <i>🛡️</i> Garantia
+        </a></li>
+        <li><a href="#" class="nav-link" data-section="baddebt">
+          <i>⚠️</i> BadDebt
+        </a></li>
+        <li><a href="#" class="nav-link" data-section="credenciamento">
+          <i>✅</i> Credenciamento
+        </a></li>
+        <li><a href="#" class="nav-link" data-section="prevencao">
+          <i>🔒</i> Prevenção
+        </a></li>
+      </ul>
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Loading State -->
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Carregando dados...</p>
+      </div>
+      
+      <!-- Overview Section -->
+      <section id="overview" class="section">
+        <div class="section-header">
+          <h2>Visão Geral</h2>
+          <p>Resumo de todas as métricas importantes</p>
+        </div>
+        
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Chargeback</span>
+              <div class="card-icon color-chargeback">💳</div>
+            </div>
+            <div class="card-value" id="overview-chargeback-total">-</div>
+            <div class="card-change" id="overview-chargeback-change">
+              <span>--</span>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Garantia</span>
+              <div class="card-icon color-garantia">🛡️</div>
+            </div>
+            <div class="card-value" id="overview-garantia-total">-</div>
+            <div class="card-change" id="overview-garantia-change">
+              <span>--</span>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">BadDebt</span>
+              <div class="card-icon color-baddebt">⚠️</div>
+            </div>
+            <div class="card-value" id="overview-baddebt-total">-</div>
+            <div class="card-change" id="overview-baddebt-change">
+              <span>--</span>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Credenciamento</span>
+              <div class="card-icon color-credenciamento">✅</div>
+            </div>
+            <div class="card-value" id="overview-credenciamento-total">-</div>
+            <div class="card-change" id="overview-credenciamento-change">
+              <span>--</span>
+            </div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Prevenção</span>
+              <div class="card-icon color-prevencao">🔒</div>
+            </div>
+            <div class="card-value" id="overview-prevencao-total">-</div>
+            <div class="card-change" id="overview-prevencao-change">
+              <span>--</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Evolução Mensal - Todas as Métricas</h3>
+            <p>Comparação das principais métricas ao longo do tempo</p>
+          </div>
+          <canvas id="overview-chart"></canvas>
+        </div>
+      </section>
+      
+      <!-- Chargeback Section -->
+      <section id="chargeback" class="section">
+        <div class="section-header">
+          <h2>Chargeback</h2>
+          <p>Análise detalhada de chargebacks</p>
+        </div>
+        
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Total Acumulado</span>
+              <div class="card-icon color-chargeback">💳</div>
+            </div>
+            <div class="card-value" id="chargeback-total">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Mês Atual</span>
+              <div class="card-icon color-chargeback">📅</div>
+            </div>
+            <div class="card-value" id="chargeback-current">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Variação</span>
+              <div class="card-icon color-chargeback">📊</div>
+            </div>
+            <div class="card-change" id="chargeback-change">
+              <span>--</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Histórico de Chargebacks</h3>
+            <p>Evolução mensal dos chargebacks</p>
+          </div>
+          <canvas id="chargeback-chart"></canvas>
+        </div>
+      </section>
+      
+      <!-- Garantia Section -->
+      <section id="garantia" class="section">
+        <div class="section-header">
+          <h2>Garantia</h2>
+          <p>Análise detalhada de garantias</p>
+        </div>
+        
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Total Acumulado</span>
+              <div class="card-icon color-garantia">🛡️</div>
+            </div>
+            <div class="card-value" id="garantia-total">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Mês Atual</span>
+              <div class="card-icon color-garantia">📅</div>
+            </div>
+            <div class="card-value" id="garantia-current">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Variação</span>
+              <div class="card-icon color-garantia">📊</div>
+            </div>
+            <div class="card-change" id="garantia-change">
+              <span>--</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Histórico de Garantias</h3>
+            <p>Evolução mensal das garantias</p>
+          </div>
+          <canvas id="garantia-chart"></canvas>
+        </div>
+      </section>
+      
+      <!-- BadDebt Section -->
+      <section id="baddebt" class="section">
+        <div class="section-header">
+          <h2>BadDebt</h2>
+          <p>Análise detalhada de dívidas incobráveis</p>
+        </div>
+        
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Total Acumulado</span>
+              <div class="card-icon color-baddebt">⚠️</div>
+            </div>
+            <div class="card-value" id="baddebt-total">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Mês Atual</span>
+              <div class="card-icon color-baddebt">📅</div>
+            </div>
+            <div class="card-value" id="baddebt-current">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Variação</span>
+              <div class="card-icon color-baddebt">📊</div>
+            </div>
+            <div class="card-change" id="baddebt-change">
+              <span>--</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Histórico de BadDebt</h3>
+            <p>Evolução mensal das dívidas incobráveis</p>
+          </div>
+          <canvas id="baddebt-chart"></canvas>
+        </div>
+      </section>
+      
+      <!-- Credenciamento Section -->
+      <section id="credenciamento" class="section">
+        <div class="section-header">
+          <h2>Credenciamento</h2>
+          <p>Análise detalhada de credenciamentos</p>
+        </div>
+        
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Total Acumulado</span>
+              <div class="card-icon color-credenciamento">✅</div>
+            </div>
+            <div class="card-value" id="credenciamento-total">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Mês Atual</span>
+              <div class="card-icon color-credenciamento">📅</div>
+            </div>
+            <div class="card-value" id="credenciamento-current">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Variação</span>
+              <div class="card-icon color-credenciamento">📊</div>
+            </div>
+            <div class="card-change" id="credenciamento-change">
+              <span>--</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Histórico de Credenciamentos</h3>
+            <p>Evolução mensal dos credenciamentos</p>
+          </div>
+          <canvas id="credenciamento-chart"></canvas>
+        </div>
+      </section>
+      
+      <!-- Prevenção Section -->
+      <section id="prevencao" class="section">
+        <div class="section-header">
+          <h2>Prevenção</h2>
+          <p>Análise detalhada de ações preventivas</p>
+        </div>
+        
+        <div class="cards-grid">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Total Acumulado</span>
+              <div class="card-icon color-prevencao">🔒</div>
+            </div>
+            <div class="card-value" id="prevencao-total">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Mês Atual</span>
+              <div class="card-icon color-prevencao">📅</div>
+            </div>
+            <div class="card-value" id="prevencao-current">-</div>
+          </div>
+          
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Variação</span>
+              <div class="card-icon color-prevencao">📊</div>
+            </div>
+            <div class="card-change" id="prevencao-change">
+              <span>--</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <div class="chart-header">
+            <h3>Histórico de Prevenção</h3>
+            <p>Evolução mensal das ações preventivas</p>
+          </div>
+          <canvas id="prevencao-chart"></canvas>
+        </div>
+      </section>
+    </main>
+  </div>
+  
+  <script>
+    // Global data storage
+    let dashboardData = {};
+    let charts = {};
+    
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeNavigation();
+      loadDashboardData();
+    });
+    
+    // Navigation
+    function initializeNavigation() {
+      const navLinks = document.querySelectorAll('.nav-link');
+      
+      navLinks.forEach(link => {
+        link.addEventListener('click', function(e) {
+          e.preventDefault();
+          
+          // Update active link
+          navLinks.forEach(l => l.classList.remove('active'));
+          this.classList.add('active');
+          
+          // Show corresponding section
+          const sectionId = this.getAttribute('data-section');
+          showSection(sectionId);
+        });
+      });
+    }
+    
+    function showSection(sectionId) {
+      const sections = document.querySelectorAll('.section');
+      sections.forEach(section => section.classList.remove('active'));
+      
+      const targetSection = document.getElementById(sectionId);
+      if (targetSection) {
+        targetSection.classList.add('active');
+      }
+    }
+    
+    // Load data from Google Apps Script
+    function loadDashboardData() {
+      google.script.run
+        .withSuccessHandler(onDataLoaded)
+        .withFailureHandler(onDataError)
+        .getAllDashboardData();
+    }
+    
+    function onDataLoaded(data) {
+      dashboardData = data;
+      
+      // Hide loading
+      document.getElementById('loading').style.display = 'none';
+      
+      // Show overview section
+      document.getElementById('overview').classList.add('active');
+      
+      // Populate all sections
+      populateOverview();
+      populateChargeback();
+      populateGarantia();
+      populateBadDebt();
+      populateCredenciamento();
+      populatePrevencao();
+    }
+    
+    function onDataError(error) {
+      console.error('Erro ao carregar dados:', error);
+      document.getElementById('loading').innerHTML = 
+        '<p style="color: #ef4444;">❌ Erro ao carregar dados. Por favor, verifique a conexão com a planilha.</p>';
+    }
+    
+    // Format number
+    function formatNumber(num) {
+      return new Intl.NumberFormat('pt-BR').format(num);
+    }
+    
+    // Format change
+    function formatChange(value) {
+      const sign = value >= 0 ? '+' : '';
+      return `${sign}${value.toFixed(1)}%`;
+    }
+    
+    // Populate Overview Section
+    function populateOverview() {
+      // Update cards
+      updateCard('overview-chargeback', dashboardData.chargeback);
+      updateCard('overview-garantia', dashboardData.garantia);
+      updateCard('overview-baddebt', dashboardData.baddebt);
+      updateCard('overview-credenciamento', dashboardData.credenciamento);
+      updateCard('overview-prevencao', dashboardData.prevencao);
+      
+      // Create overview chart
+      createOverviewChart();
+    }
+    
+    function updateCard(prefix, data) {
+      const totalEl = document.getElementById(`${prefix}-total`);
+      const changeEl = document.getElementById(`${prefix}-change`);
+      
+      if (totalEl) {
+        totalEl.textContent = formatNumber(data.mes_atual);
+      }
+      
+      if (changeEl) {
+        const changeClass = data.variacao >= 0 ? 'positive' : 'negative';
+        const arrow = data.variacao >= 0 ? '↑' : '↓';
+        changeEl.className = `card-change ${changeClass}`;
+        changeEl.innerHTML = `<span>${arrow} ${formatChange(data.variacao)} vs mês anterior</span>`;
+      }
+    }
+    
+    function createOverviewChart() {
+      const ctx = document.getElementById('overview-chart');
+      
+      if (charts['overview']) {
+        charts['overview'].destroy();
+      }
+      
+      const labels = dashboardData.chargeback.historico.map(h => h.mes);
+      
+      charts['overview'] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [
+            {
+              label: 'Chargeback',
+              data: dashboardData.chargeback.historico.map(h => h.valor),
+              borderColor: '#f5576c',
+              backgroundColor: 'rgba(245, 87, 108, 0.1)',
+              tension: 0.4
+            },
+            {
+              label: 'Garantia',
+              data: dashboardData.garantia.historico.map(h => h.valor),
+              borderColor: '#00f2fe',
+              backgroundColor: 'rgba(0, 242, 254, 0.1)',
+              tension: 0.4
+            },
+            {
+              label: 'BadDebt',
+              data: dashboardData.baddebt.historico.map(h => h.valor),
+              borderColor: '#fee140',
+              backgroundColor: 'rgba(254, 225, 64, 0.1)',
+              tension: 0.4
+            },
+            {
+              label: 'Credenciamento',
+              data: dashboardData.credenciamento.historico.map(h => h.valor),
+              borderColor: '#30cfd0',
+              backgroundColor: 'rgba(48, 207, 208, 0.1)',
+              tension: 0.4
+            },
+            {
+              label: 'Prevenção',
+              data: dashboardData.prevencao.historico.map(h => h.valor),
+              borderColor: '#fed6e3',
+              backgroundColor: 'rgba(254, 214, 227, 0.1)',
+              tension: 0.4
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: true,
+              position: 'bottom'
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+    
+    // Populate individual sections
+    function populateChargeback() {
+      const data = dashboardData.chargeback;
+      
+      document.getElementById('chargeback-total').textContent = formatNumber(data.total);
+      document.getElementById('chargeback-current').textContent = formatNumber(data.mes_atual);
+      
+      const changeEl = document.getElementById('chargeback-change');
+      const changeClass = data.variacao >= 0 ? 'positive' : 'negative';
+      const arrow = data.variacao >= 0 ? '↑' : '↓';
+      changeEl.className = `card-change ${changeClass}`;
+      changeEl.innerHTML = `<span style="font-size: 2rem;">${arrow} ${formatChange(data.variacao)}</span>`;
+      
+      createSectionChart('chargeback-chart', data, '#f5576c');
+    }
+    
+    function populateGarantia() {
+      const data = dashboardData.garantia;
+      
+      document.getElementById('garantia-total').textContent = formatNumber(data.total);
+      document.getElementById('garantia-current').textContent = formatNumber(data.mes_atual);
+      
+      const changeEl = document.getElementById('garantia-change');
+      const changeClass = data.variacao >= 0 ? 'positive' : 'negative';
+      const arrow = data.variacao >= 0 ? '↑' : '↓';
+      changeEl.className = `card-change ${changeClass}`;
+      changeEl.innerHTML = `<span style="font-size: 2rem;">${arrow} ${formatChange(data.variacao)}</span>`;
+      
+      createSectionChart('garantia-chart', data, '#00f2fe');
+    }
+    
+    function populateBadDebt() {
+      const data = dashboardData.baddebt;
+      
+      document.getElementById('baddebt-total').textContent = formatNumber(data.total);
+      document.getElementById('baddebt-current').textContent = formatNumber(data.mes_atual);
+      
+      const changeEl = document.getElementById('baddebt-change');
+      const changeClass = data.variacao >= 0 ? 'positive' : 'negative';
+      const arrow = data.variacao >= 0 ? '↑' : '↓';
+      changeEl.className = `card-change ${changeClass}`;
+      changeEl.innerHTML = `<span style="font-size: 2rem;">${arrow} ${formatChange(data.variacao)}</span>`;
+      
+      createSectionChart('baddebt-chart', data, '#fee140');
+    }
+    
+    function populateCredenciamento() {
+      const data = dashboardData.credenciamento;
+      
+      document.getElementById('credenciamento-total').textContent = formatNumber(data.total);
+      document.getElementById('credenciamento-current').textContent = formatNumber(data.mes_atual);
+      
+      const changeEl = document.getElementById('credenciamento-change');
+      const changeClass = data.variacao >= 0 ? 'positive' : 'negative';
+      const arrow = data.variacao >= 0 ? '↑' : '↓';
+      changeEl.className = `card-change ${changeClass}`;
+      changeEl.innerHTML = `<span style="font-size: 2rem;">${arrow} ${formatChange(data.variacao)}</span>`;
+      
+      createSectionChart('credenciamento-chart', data, '#30cfd0');
+    }
+    
+    function populatePrevencao() {
+      const data = dashboardData.prevencao;
+      
+      document.getElementById('prevencao-total').textContent = formatNumber(data.total);
+      document.getElementById('prevencao-current').textContent = formatNumber(data.mes_atual);
+      
+      const changeEl = document.getElementById('prevencao-change');
+      const changeClass = data.variacao >= 0 ? 'positive' : 'negative';
+      const arrow = data.variacao >= 0 ? '↑' : '↓';
+      changeEl.className = `card-change ${changeClass}`;
+      changeEl.innerHTML = `<span style="font-size: 2rem;">${arrow} ${formatChange(data.variacao)}</span>`;
+      
+      createSectionChart('prevencao-chart', data, '#a8edea');
+    }
+    
+    function createSectionChart(canvasId, data, color) {
+      const ctx = document.getElementById(canvasId);
+      
+      if (charts[canvasId]) {
+        charts[canvasId].destroy();
+      }
+      
+      const labels = data.historico.map(h => h.mes);
+      const values = data.historico.map(h => h.valor);
+      
+      charts[canvasId] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Valor',
+            data: values,
+            backgroundColor: color,
+            borderColor: color,
+            borderWidth: 1,
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          plugins: {
+            legend: {
+              display: false
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true
+            }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>
